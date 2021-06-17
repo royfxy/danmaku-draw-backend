@@ -4,8 +4,6 @@ import logging
 
 from websocket_sender import Message, MessageType
 
-logging.basicConfig(level=logging.DEBUG)
-
 
 class EmptyError(Exception):
     pass
@@ -41,10 +39,10 @@ class MusicService:
         result = json.loads(result_raw)['result']['songs']
         if len(result) == 0:
             raise EmptyError
-        id = result[0]['id']
-        name = result[0]['name']
+        music_id = result[0]['id']
+        title = result[0]['name']
         artists = ", ".join([x["name"] for x in result[0]['artists']])
-        return id, name, artists
+        return music_id, title, artists
 
     async def get_info(self, id):
         path = "/song/detail"

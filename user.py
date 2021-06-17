@@ -4,8 +4,6 @@ import asyncio
 import random
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
 class User(Model):
     _buffer_size = 5
     _lru_discard_size = 2
@@ -22,10 +20,11 @@ class User(Model):
                 logging.debug(f"User {primary_key} found in DB.")
             
         if user:
-            await cls._visit(user)
-        else:
-            logging.debug(f"User {primary_key} not found.")
-        return user
+            return user
+
+        logging.debug(f"User {primary_key} not found.")
+        return None
+        
 
     @classmethod
     async def store_all(cls):
@@ -54,7 +53,7 @@ class User(Model):
         while len(cls._buffer) > cls._buffer_size - cls._lru_discard_size:
             if len(cls._buffer) == 0:
                 break
-            key, user = cls._buffer.popitem(last=False)
+            _, user = cls._buffer.popitem(last=False)
             await user.save(force=True)
             count += 1
         logging.debug(f"Removed {count} items from user buffer and saved to DB.")
@@ -64,7 +63,7 @@ class User(Model):
         user = await cls.find(kw["uid"])
         if not user:
             user = User(**kw)
-            await User._visit(user)
+        await User._visit(user)
         return user
 
     async def save(self, force=False):

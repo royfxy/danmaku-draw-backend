@@ -6,8 +6,6 @@ from enum import Enum, unique
 
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
 @unique
 class MessageType(Enum):
     DRAW_PIXEL = 0
@@ -35,16 +33,17 @@ class Message:
     def __str__(self):
         return json.dumps(self.to_json())
 
-
 class WebsocketSender:
     def __init__(self, port, ip = 'localhost'):
         self._port = port
         self._ip = ip
+        self._name = str(ip) + ':' + str(port)
         self._loop = asyncio.new_event_loop()
         self._future = None
-        self._websocket = set()
+        self._clients = set()
         self._start(self._loop)
-        
+    
+    # start a new thread to handle websocket
     def _start(self, loop):
         def run_forever(loop):
             asyncio.set_event_loop(loop)
@@ -54,31 +53,33 @@ class WebsocketSender:
         thread = threading.Thread(target=run_forever, args=(loop,))
         thread.daemon=True
         thread.start()
+        logging.info(f"New websocket sender {self._name}")
 
     async def _connect(self, websocket, path):
-        self._websocket.add(websocket)
+        self._clients.add(websocket)
+        logging.debug(f"New websocket connection to {self._name}")
         while True:
             self._future = self._loop.create_future()
             message = await self._future
             count = 0
-            for ws in list(self._websocket):
+
+            # send message to all connected clients
+            for ws in list(self._clients):
                 try:
                     await ws.send(str(message))
                     count += 1
                 except websockets.exceptions.ConnectionClosed:
-                    self._websocket.remove(ws)
+                    self._clients.remove(ws)
                 except TypeError:
                     pass
-            logging.debug(f"Sent message \"{str(message)}\" to {count} clients.")
+            logging.debug(f"Websocket {self._name} sent message \"{str(message)}\" to {count} clients.")
 
     async def _producer(self, message):
         self._future.set_result(message)
 
-
     async def send(self, message:Message):
         if self._future is None:
+            logging.warning(f"Websocket {self._name} future not ready.")
             return
-        # await self._producer(message)
         asyncio.run_coroutine_threadsafe(self._producer(message), loop=self._loop)
         
-

@@ -6,7 +6,6 @@ import logging
 from user import User
 from websocket_sender import Message, MessageType
 
-logging.basicConfig(level=logging.DEBUG)
 
 class Pixel(Model):
     __table__ = "pixel_history"
@@ -20,14 +19,14 @@ class Pixel(Model):
         cls._clear_buffer()
         await cls._set_last_id()
 
-    @classmethod 
+    @classmethod
     async def _set_last_id(cls):
         ids = await cls._sql.select('SELECT `id` FROM `%s` ORDER BY id DESC LIMIT 1' % (cls.__table__), [])
         if len(ids) == 0:
-            id = 0
+            last_id = 0
         else:
-            id = ids[0][0]
-        cls._last_id = id
+            last_id = ids[0][0]
+        cls._last_id = last_id
 
     @classmethod
     def _clear_buffer(cls):
@@ -49,9 +48,11 @@ class Pixel(Model):
     @classmethod
     async def pixel(cls, user_id, pos, color_id):
         if user_id in cls._buffer:
-            interval = Time.timestamp(Time.now()) - Time.timestamp(cls._buffer[user_id].time)
-            if  interval <= cls._expire_time:
-                logging.debug(f"User {user_id} draw too frequently, {cls._expire_time - interval} seconds left.")
+            interval = Time.timestamp(Time.now()) - \
+                Time.timestamp(cls._buffer[user_id].time)
+            if interval <= cls._expire_time:
+                logging.debug(
+                    f"User {user_id} draw too frequently, {cls._expire_time - interval} seconds left.")
                 return None
         await cls._discard()
         pixel = Pixel(pos=pos,
@@ -65,7 +66,6 @@ class Pixel(Model):
     time = TimestampField('time')
     color_id = IntegerField('color_id')
     user_id = IntegerField('user_id')
-
 
     def __init__(self, **kw):
         if Pixel._last_id is None:
@@ -105,10 +105,16 @@ class Color(Model):
 
 class Canvas(Model):
     __table__ = "canvas"
-    
-    _canvas_row = 50
-    _canvas_col = 50
-    _canvas_buffer = [None]*_canvas_col*_canvas_row
+
+    _canvas_row = None
+    _canvas_col = None
+    _canvas_buffer = None
+
+    @classmethod
+    def config(cls, col, row):
+        cls._canvas_row = row
+        cls._canvas_col = col
+        cls._canvas_buffer = [None]*cls._canvas_col*cls._canvas_row
 
     @classmethod
     async def init(cls):
@@ -123,7 +129,8 @@ class Canvas(Model):
     @classmethod
     def _get_pos(cls, x, y):
         if x >= cls._canvas_col or x < 0 or y >= cls._canvas_row or y < 0:
-            logging.debug(f"Position ({x}, {y}) out of range({cls._canvas_row}, {cls._canvas_col}).")
+            logging.debug(
+                f"Position ({x}, {y}) out of range({cls._canvas_row}, {cls._canvas_col}).")
             return None
         return y + x * cls._canvas_col
 
@@ -145,11 +152,13 @@ class Canvas(Model):
 
     @classmethod
     def canvas(cls):
-        data = {"col_num": cls._canvas_col, "row_num":cls._canvas_row, "colors":Color.colors, "pixels": cls._canvas_buffer}
+        data = {"col_num": cls._canvas_col, "row_num": cls._canvas_row,
+                "colors": Color.colors, "pixels": cls._canvas_buffer}
         return Message(MessageType.INIT_CANVAS, data)
 
     pos = IntegerField('pos', primary_key=True)
     pixel_id = IntegerField('pixel_id')
+
 
 async def draw_pixel(user_id, user_name, x, y, color_id):
     user = await User.user(uid=user_id, name=user_name)

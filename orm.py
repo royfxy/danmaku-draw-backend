@@ -2,8 +2,6 @@ from sql import SQL
 import datetime
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
 class Time:
     @classmethod
     def now(cls):

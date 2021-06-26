@@ -1,7 +1,5 @@
 from collections import OrderedDict
 from orm import Model, StringField, IntegerField
-import asyncio
-import random
 import logging
 
 class User(Model):
@@ -89,6 +87,7 @@ class User(Model):
                                default=0,
                                column_type='int unsigned')
     weight = IntegerField('weight', default=10, column_type='int unsigned')
+    vip_level = IntegerField('vip_level', default=0, column_type='int(4)')
 
     def __init__(self, **kw):
         super(User, self).__init__(**kw)

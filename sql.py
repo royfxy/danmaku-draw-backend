@@ -1,5 +1,3 @@
-from os import execlpe
-from random import expovariate
 import aiomysql
 import asyncio
 from singleton import singleton

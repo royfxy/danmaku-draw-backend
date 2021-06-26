@@ -98,16 +98,16 @@ class Playlist:
     @classmethod
     async def add(cls, user, query):
         if len(cls._playlist) >= cls._total_limit:
-            return False
+            return None
         if user.uid in cls._user_song_count and cls._user_song_count[
                 user.uid] >= cls._limit_per_user:
-            return False
+            return None
         try:
             song_id, song_name, artists = await cls._service.search(query)
         except EmptyError:
-            return False
+            return None
         except NetworkError:
-            return False
+            return None
 
         weight = user.weight
 
@@ -130,7 +130,7 @@ class Playlist:
                 cls._playlist.insert(i, song)
                 break
         logging.debug(f"Song {song.song_id} added to playlist.")
-        return True
+        return song
 
     @classmethod
     def playing(cls):

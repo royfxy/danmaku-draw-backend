@@ -24,6 +24,7 @@ config_music_service = config["musicservice"]
 config_canvas = config["canvas"]
 config_messagews = config["messagews"]
 config_sanic = config["sanic"]
+config_initmessage = config["initmessage"]
 
 # Parse arguements
 parser = argparse.ArgumentParser()
@@ -68,9 +69,15 @@ canvas_sender = WebsocketSender(config_canvas["port"],
                                 config_canvas["ip"],)
 
 live_handler = LiveHandler(message_sender=message_sender,
-                           canvas_sender=canvas_sender)
+                           canvas_sender=canvas_sender,
+                           init_message=config_initmessage)
 
 client = DanmakuClient(config_live["id"], handler=live_handler)
+
+
+@sanic_app.get("/api/message/hints")
+async def get_hints(request):
+    return sjson(live_handler.get_init_message().to_json())
 
 
 @sanic_app.get("/api/music/playlist")
@@ -88,8 +95,8 @@ async def music_detail(request):
 @sanic_app.get("/api/music/skip")
 @auth.auth_required
 async def skip_song(request):
-    if Playlist.skip():
-        return sjson(Playlist.playlist().to_json())
+    Playlist.skip()
+    return sjson(Playlist.playlist().to_json())
 
 
 @sanic_app.get("/api/canvas/canvas")
@@ -97,7 +104,7 @@ async def get_canvas(request):
     return sjson(Canvas.canvas().to_json())
 
 
-@sanic_app.get("/api/exit")
+@sanic_app.post("/api/exit")
 async def exit_backend(request):
     live_handler.store_all()
     return text("OK")

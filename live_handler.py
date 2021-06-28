@@ -78,12 +78,15 @@ class LiveHandler:
             user.silver_coin += coin_count
             if (user.vip_level < 1):
                 user.vip_level = 1
+                user.weight += int(coin_count/10)
+                await user.save(force=True)
         elif (coin_type == "gold" and coin_count > 0):
             user.gold_coin += coin_count
             if (user.vip_level < 2):
                 user.vip_level = 2
+                user.weight += coin_count
+                await user.save(force=True)
         
-        await user.save(force=True)
         data = {
             "username": user_name,
             "giftname": gift_name,
@@ -131,7 +134,7 @@ class LiveHandler:
                     "viplevel": user.vip_level
                 }))
 
-    # skip song
+    # skip playing song
     async def _skip_song(self, user_id, user_name):
         user = await User.user(uid=user_id, name=user_name)
         if user_id == Playlist.playing()["user_id"]:
@@ -146,9 +149,14 @@ class LiveHandler:
     async def _add_song(self, user_id, user_name, query):
         user = await User.user(uid=user_id, name=user_name)
         song = await Playlist.add(user, query)
+        
         if song:
             await self._message_ws.send(Playlist.playlist())
             user.music_ordered += 1
+            if user.weight > 0:
+                user.weight -= 10
+                if user.weight < 0:
+                    user.weight = 0
             await user.save()
             await self._message_ws.send(
                 Message(MessageType.TEXT_MESSAGE, {

@@ -139,7 +139,7 @@ class LiveHandler:
         user = await User.user(uid=user_id, name=user_name)
         if user_id == Playlist.playing()["user_id"]:
             Playlist.skip()
-        await self._message_ws.send(Playlist.playlist())
+        await self._message_ws.send(await Playlist.playlist())
         await self._message_ws.send(
             Message(MessageType.TEXT_MESSAGE, {
                 "text": f"{user.name} 切歌成功",
@@ -151,7 +151,7 @@ class LiveHandler:
         song = await Playlist.add(user, query)
         
         if song:
-            await self._message_ws.send(Playlist.playlist())
+            await self._message_ws.send(await Playlist.playlist())
             user.music_ordered += 1
             if user.weight > 0:
                 user.weight -= 10

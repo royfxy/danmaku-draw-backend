@@ -20,7 +20,7 @@ with open("./config.json", "r") as json_file:
     config = json.load(json_file)
 config_db = config["database"]
 config_live = config["liveroom"]
-config_music_service = config["musicservice"]
+config_music = config["music"]
 config_canvas = config["canvas"]
 config_messagews = config["messagews"]
 config_sanic = config["sanic"]
@@ -59,9 +59,13 @@ print(f"SECRET KEY: {secret_key}")
 # Config canvas
 Canvas.config(col=config_canvas["col"], row=config_canvas["row"])
 
-music_service = MusicService(config_music_service["port"],
-                             config_music_service["ip"])
+# Config music
+music_service = MusicService(config_music["port"],
+                             config_music["ip"])
 Playlist.set_serivce(music_service)
+if "default" in config_music:
+    for query in config_music["default"]:
+        Playlist.add_to_default(query)
 
 message_sender = WebsocketSender(config_messagews["port"],
                                  config_messagews["ip"],)
@@ -83,7 +87,7 @@ async def get_hints(request):
 @sanic_app.get("/api/music/playlist")
 @auth.auth_required
 async def get_playlist(request):
-    return sjson(Playlist.playlist().to_json())
+    return sjson((await Playlist.playlist()).to_json())
 
 
 @sanic_app.get("/api/music/play")
@@ -95,9 +99,17 @@ async def music_detail(request):
 @sanic_app.get("/api/music/skip")
 @auth.auth_required
 async def skip_song(request):
-    Playlist.skip()
-    return sjson(Playlist.playlist().to_json())
+    await Playlist.skip()
+    return sjson((await Playlist.playlist()).to_json())
 
+@sanic_app.post("/api/music/add")
+@auth.auth_required
+async def add_default_song(request):
+    print(request.json)
+    if "query" in request.json:
+        Playlist.add_to_default(request.json["query"])
+        return text("OK")
+    return text("Error")
 
 @sanic_app.get("/api/canvas/canvas")
 async def get_canvas(request):

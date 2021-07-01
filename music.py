@@ -1,6 +1,7 @@
 import json
 import aiohttp
 import logging
+import random
 
 from websocket_sender import Message, MessageType
 
@@ -91,6 +92,10 @@ class Playlist:
     _limit_per_user = 2
     _total_limit = 50
 
+    _default_playlist = []
+    _last_random_index = None
+    _random_song = None
+
     @classmethod
     def set_serivce(cls, music_service):
         cls._service = music_service
@@ -133,20 +138,55 @@ class Playlist:
         return song
 
     @classmethod
+    def add_to_default(cls, query):
+        if query not in cls._default_playlist:
+            cls._default_playlist.append(query)
+
+    @classmethod
+    async def new_random_song(cls):
+        defalut_playlist_length = len(cls._default_playlist)
+        if defalut_playlist_length == 0:
+            return
+        while True:
+            random_index = random.randint(0, defalut_playlist_length - 1)
+            if random_index != cls._last_random_index:
+                cls._last_random_index = random_index
+                break
+        query = cls._default_playlist[random_index]
+        try:
+            song_id, song_name, artists = await cls._service.search(query)
+        except EmptyError:
+            return None
+        except NetworkError:
+            return None
+        cls._random_song = Song(user_id=0,
+                    user_name="系统",
+                    song_id=song_id,
+                    song_name=song_name,
+                    artists=artists,
+                    weight=0)
+
+    @classmethod
     def playing(cls):
         if len(cls._playlist) == 0:
             return None
         return cls._playlist[-1].json()
 
     @classmethod
-    def playlist(cls):
+    async def playlist(cls):
+        if len(cls._playlist) == 0:
+            if cls._random_song is None:
+                await cls.new_random_song()
+            random_song = cls._random_song
+            return Message(MessageType.UPDATE_PLAYLIST, [random_song.json()])
         return Message(MessageType.UPDATE_PLAYLIST, [song.json() for song in cls._playlist])
 
     @classmethod
     async def play(cls):
         if len(cls._playlist) == 0:
-            return Message.none()
-        song = cls._playlist[0]
+            song = cls._random_song
+        else:
+            song = cls._playlist[0]
         first_id = song.song_id
         info = await cls._service.get_info(first_id)
         play_url = await cls._service.get_play_url(first_id)
@@ -154,12 +194,13 @@ class Playlist:
         return Message(MessageType.PLAY_SONG, {"info": info, "play_url": play_url, "user_name": song.user_name})
 
     @classmethod
-    def skip(cls):
+    async def skip(cls):
         if len(cls._playlist) == 0:
-            return False
-        song = cls._playlist.pop(0)
-        cls._user_song_count[song.user_id] -= 1
-        if cls._user_song_count[song.user_id] == 0:
-            del cls._user_song_count[song.user_id]
+            await cls.new_random_song()
+        else:
+            song = cls._playlist.pop(0)
+            cls._user_song_count[song.user_id] -= 1
+            if cls._user_song_count[song.user_id] == 0:
+                del cls._user_song_count[song.user_id]
         logging.debug(f"Song skipped.")
         return True

@@ -105,7 +105,6 @@ async def skip_song(request):
 @sanic_app.post("/api/music/add")
 @auth.auth_required
 async def add_default_song(request):
-    print(request.json)
     if "query" in request.json:
         Playlist.add_to_default(request.json["query"])
         return text("OK")

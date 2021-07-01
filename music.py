@@ -146,7 +146,7 @@ class Playlist:
     async def new_random_song(cls):
         defalut_playlist_length = len(cls._default_playlist)
         if defalut_playlist_length == 0:
-            return
+            return None
         while True:
             random_index = random.randint(0, defalut_playlist_length - 1)
             if random_index != cls._last_random_index:
@@ -169,8 +169,8 @@ class Playlist:
     @classmethod
     def playing(cls):
         if len(cls._playlist) == 0:
-            return None
-        return cls._playlist[-1].json()
+            return cls._random_song
+        return cls._playlist[0]
 
     @classmethod
     async def playlist(cls):

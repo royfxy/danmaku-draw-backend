@@ -137,7 +137,7 @@ class LiveHandler:
     # skip playing song
     async def _skip_song(self, user_id, user_name):
         user = await User.user(uid=user_id, name=user_name)
-        if user_id == Playlist.playing()["user_id"]:
+        if Playlist.playing().user_id == 0 or user_id == Playlist.playing().user_id:
             Playlist.skip()
         await self._message_ws.send(await Playlist.playlist())
         await self._message_ws.send(

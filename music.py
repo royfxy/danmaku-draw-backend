@@ -124,7 +124,7 @@ class Playlist:
         if len(cls._playlist) == 0 or weight <= cls._playlist[-1].weight:
             cls._playlist.append(song)
         else:
-            for i in range(len(cls._playlist)):
+            for i in range(1, len(cls._playlist)):
                 if (cls._playlist[i].weight >= weight):
                     continue
                 cls._playlist.insert(i, song)

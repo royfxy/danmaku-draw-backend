@@ -11,7 +11,7 @@ class Pixel(Model):
     __table__ = "pixel_history"
 
     _buffer = OrderedDict()
-    _expire_time = 30
+    _expire_time = 3
     _last_id = None
 
     @classmethod

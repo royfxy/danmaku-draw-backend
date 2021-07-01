@@ -138,13 +138,13 @@ class LiveHandler:
     async def _skip_song(self, user_id, user_name):
         user = await User.user(uid=user_id, name=user_name)
         if Playlist.playing().user_id == 0 or user_id == Playlist.playing().user_id:
-            Playlist.skip()
-        await self._message_ws.send(await Playlist.playlist())
-        await self._message_ws.send(
-            Message(MessageType.TEXT_MESSAGE, {
-                "text": f"{user.name} 切歌成功",
-                "viplevel": user.vip_level
-            }))
+            await Playlist.skip()
+            await self._message_ws.send(await Playlist.playlist())
+            await self._message_ws.send(
+                Message(MessageType.TEXT_MESSAGE, {
+                    "text": f"{user.name} 切歌成功",
+                    "viplevel": user.vip_level
+                }))
 
     async def _add_song(self, user_id, user_name, query):
         user = await User.user(uid=user_id, name=user_name)

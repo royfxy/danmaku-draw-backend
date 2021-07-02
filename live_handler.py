@@ -165,7 +165,10 @@ class LiveHandler:
                 "colorid": color_id
             }
             user.dots_drawed += len(pixels)
-            user.weight -= len(pixels)
+            if user.weight > 0:
+                user.weight -= len(pixels)
+                if user.weight < 0:
+                    user.weight = 0
             await self._canvas_ws.send(Message(MessageType.DRAW_MULTIPLE_PIXELS, data))
             await self._message_ws.send(
                 Message(MessageType.TEXT_MESSAGE, {

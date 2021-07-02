@@ -46,11 +46,11 @@ class Pixel(Model):
         logging.debug(f"Removed {count} items from pixel history buffer.")
 
     @classmethod
-    async def pixel(cls, user_id, pos, color_id):
+    async def pixel(cls, user_id, pos, color_id, ignore_interval=False):
         if user_id in cls._buffer:
             interval = Time.timestamp(Time.now()) - \
                 Time.timestamp(cls._buffer[user_id].time)
-            if interval <= cls._expire_time:
+            if (interval <= cls._expire_time and not ignore_interval):
                 logging.debug(
                     f"User {user_id} draw too frequently, {cls._expire_time - interval} seconds left.")
                 return None
@@ -135,12 +135,13 @@ class Canvas(Model):
         return y + x * cls._canvas_col
 
     @classmethod
-    async def draw(cls, user_id, x, y, color_id):
+    async def draw(cls, user_id, x, y, color_id, ignore_interval=False):
         pos = cls._get_pos(x, y)
         if pos is None:
             return None
 
-        pixel = await Pixel.pixel(user_id, pos, color_id)
+        pixel = await Pixel.pixel(user_id, pos, color_id,
+                                  ignore_interval=ignore_interval)
         if not pixel:
             return None
         canvas_pixel = Canvas(pos=pixel.pos, pixel_id=pixel.id)
@@ -149,6 +150,21 @@ class Canvas(Model):
         cls._canvas_buffer[pixel.pos] = pixel.color_id
         logging.debug(f"Pixel ({x}, {y}) drawed.")
         return pixel
+
+    @classmethod
+    async def draw_multiple(cls, user_id, x_start, x_end, y_start, y_end, color_id):
+        pos_start = cls._get_pos(x_start, y_start)
+        pos_end = cls._get_pos(x_end, y_end)
+        pixels = []
+        if pos_start is None or pos_end is None:
+            return None
+        for x in range(x_start, x_end + 1):
+            for y in range(y_start, y_end+1):
+                pixel = await cls.draw(user_id, x, y, color_id,
+                                       ignore_interval=True)
+                if pixel:
+                    pixels.append(pixel)
+        return pixels
 
     @classmethod
     def canvas(cls):

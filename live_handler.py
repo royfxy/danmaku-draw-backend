@@ -9,11 +9,17 @@ from canvas import Canvas
 import logging
 
 
-def get_num(x: str):
+def get_range_num(x: str):
     try:
-        return int(x)
+        single_num = int(x)
+        return single_num, single_num
     except ValueError:
-        return None
+        nums_str = x.split(":")
+        if len(nums_str) != 2:
+            return None, None
+        num1 = int(nums_str[0])
+        num2 = int(nums_str[1])
+        return num1, num2
 
 
 class DanmakuClient(blivedm.BLiveClient):
@@ -58,19 +64,26 @@ class LiveHandler:
         if length == 1:
             if (tokens[0] == "切歌"):
                 await self._skip_song(user_id=user_id, user_name=user_name)
+            elif (tokens[0] == "点数"):
+                await self._get_value(user_id=user_id, user_name=user_name)
 
         elif (tokens[0] == "点歌"):
             await self._add_song(user_id=user_id,
                                  user_name=user_name,
                                  query=" ".join(tokens[1:]))
-        nums = self._parse_nums(tokens)
-        if nums is not None:
-            if length == 3:
+        elif length == 3:
+            try:
+                pixel_count, x, y, color_id = self._parse_draw_op(tokens)
                 await self._draw_pixel(user_id=user_id,
                                        user_name=user_name,
-                                       x=nums[1]-1,
-                                       y=nums[0]-1,
-                                       color_id=nums[2])
+                                       pixel_count=pixel_count,
+                                       x_start=x[0]-1,
+                                       x_end=x[1]-1,
+                                       y_start=y[0]-1,
+                                       y_end=y[1]-1,
+                                       color_id=color_id)
+            except ValueError:
+                pass
 
     async def receive_gift(self, user_id, user_name, gift_name, gift_count, coin_type, coin_count):
         user = await User.user(uid=user_id, name=user_name)
@@ -84,9 +97,9 @@ class LiveHandler:
             user.gold_coin += coin_count
             if (user.vip_level < 2):
                 user.vip_level = 2
-                user.weight += coin_count
+                user.weight += int(coin_count/2)
                 await user.save(force=True)
-        
+
         data = {
             "username": user_name,
             "giftname": gift_name,
@@ -94,10 +107,10 @@ class LiveHandler:
         }
         await self._message_ws.send(Message(MessageType.RECEIVE_GIFT, data))
         await self._message_ws.send(
-                Message(MessageType.TEXT_MESSAGE, {
+            Message(MessageType.TEXT_MESSAGE, {
                     "text": f"感谢 {user.name} 送的 {gift_name} {gift_count} 个",
                     "viplevel": user.vip_level
-                }))
+                    }))
 
     def get_init_message(self):
         return Message(MessageType.INIT_MESSAGE, self.init_message)
@@ -106,33 +119,60 @@ class LiveHandler:
         asyncio.get_event_loop().create_task(User.store_all())
         logging.info(f"All data stored to DB.")
 
-    def _parse_nums(self, tokens):
-        nums = []
-        for token in tokens:
-            num = get_num(token)
-            if num == None:
-                return None
-            nums.append(num)
-        return nums
+    def _parse_draw_op(self, tokens):
+        x_1, x_2 = get_range_num(tokens[1])
+        y_1, y_2 = get_range_num(tokens[0])
+        x_start = min(x_1, x_2)
+        x_end = max(x_1, x_2)
+        y_start = min(y_1, y_2)
+        y_end = max(y_1, y_2)
+        color_id = int(tokens[2])
+        pixel_count = (x_end - x_start + 1) * (y_end - y_start + 1)
+        return pixel_count, (x_start, x_end), (y_start, y_end), color_id
 
     # draw a pixel on canvas
-    async def _draw_pixel(self, user_id, user_name, x, y, color_id):
+    async def _draw_pixel(self, user_id, user_name, pixel_count,
+                          x_start, x_end, y_start, y_end, color_id):
         user = await User.user(uid=user_id, name=user_name)
-        pixel = await Canvas.draw(user.uid, x, y, color_id)
-        if pixel:
+        if pixel_count == 1:
+            pixel = await Canvas.draw(user.uid, x_start, y_start, color_id)
+            if pixel:
+                data = {
+                    "username": user.name,
+                    "pos": pixel.pos,
+                    "colorid": pixel.color_id
+                }
+                await self._canvas_ws.send(Message(MessageType.DRAW_PIXEL, data))
+                user.dots_drawed += 1
+                await self._message_ws.send(
+                    Message(MessageType.TEXT_MESSAGE, {
+                        "text": f"{user.name} 涂色: {y_start+1}-{x_start+1}-{color_id}",
+                        "viplevel": user.vip_level
+                    }))
+        else:
+            if user.weight < pixel_count:
+                await self._message_ws.send(
+                    Message(MessageType.TEXT_MESSAGE, {
+                        "text": f"{user.name} 批量涂色失败: 点数不足，剩余 {user.weight} 点",
+                        "viplevel": user.vip_level
+                    }))
+                return
+            pixels = await Canvas.draw_multiple(user.uid, x_start, x_end,
+                                                y_start, y_end, color_id)
             data = {
                 "username": user.name,
-                "pos": pixel.pos,
-                "colorid": pixel.color_id
+                "pos": [pixel.pos for pixel in pixels],
+                "colorid": color_id
             }
-            await self._canvas_ws.send(Message(MessageType.DRAW_PIXEL, data))
-            user.dots_drawed += 1
-            await user.save()
+            user.dots_drawed += len(pixels)
+            user.weight -= len(pixels)
+            await self._canvas_ws.send(Message(MessageType.DRAW_MULTIPLE_PIXELS, data))
             await self._message_ws.send(
                 Message(MessageType.TEXT_MESSAGE, {
-                    "text": f"{user.name} 涂色: {y+1}-{x+1}-{color_id}",
-                    "viplevel": user.vip_level
-                }))
+                    "text": f"{user.name} 批量涂色成功，剩余点数: {user.weight}",
+                        "viplevel": user.vip_level
+                        }))
+        await user.save()
 
     # skip playing song
     async def _skip_song(self, user_id, user_name):
@@ -149,17 +189,25 @@ class LiveHandler:
     async def _add_song(self, user_id, user_name, query):
         user = await User.user(uid=user_id, name=user_name)
         song = await Playlist.add(user, query)
-        
+
         if song:
             await self._message_ws.send(await Playlist.playlist())
             user.music_ordered += 1
             if user.weight > 0:
-                user.weight -= 10
+                user.weight -= 5
                 if user.weight < 0:
                     user.weight = 0
             await user.save()
             await self._message_ws.send(
                 Message(MessageType.TEXT_MESSAGE, {
                     "text": f"{user.name} 点歌: {song.song_name}",
+                    "viplevel": user.vip_level
+                }))
+
+    async def _get_value(self, user_id, user_name):
+        user = await User.user(uid=user_id, name=user_name)
+        await self._message_ws.send(
+                Message(MessageType.TEXT_MESSAGE, {
+                    "text": f"{user.name} 剩余点数: {user.weight}",
                     "viplevel": user.vip_level
                 }))

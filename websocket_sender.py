@@ -17,6 +17,7 @@ class MessageType(Enum):
     INIT_CANVAS = 6
     INIT_MESSAGE = 7
     RECEIVE_GIFT = 8
+    DRAW_MULTIPLE_PIXELS = 9
 
 
 class Message:
@@ -40,9 +41,10 @@ class WebsocketSender:
         self._ip = ip
         self._name = str(ip) + ':' + str(port)
         self._loop = asyncio.get_event_loop()
-        self._future = None
-        self._future_lock = None
+        self._future = self._loop.create_future()
+        self._future_lock = False
         self._clients = set()
+        self._messagequeue = []
         self._start()
     
     # start a new thread to handle websocket
@@ -54,9 +56,14 @@ class WebsocketSender:
         self._clients.add(websocket)
         logging.debug(f"New websocket connection to {self._name}")
         while True:
-            self._future = self._loop.create_future()
-            message = await self._future
-            self._future_lock.set_result(True)
+            # self._future_lock.set_result(True)
+            if len(self._messagequeue) == 0:
+                self._future_lock = self._loop.create_future()
+                await self._future_lock
+
+            # message = await self._future
+            message = self._messagequeue.pop(0)
+            # self._future = self._loop.create_future()
             count = 0
 
             # send message to all connected clients
@@ -71,12 +78,14 @@ class WebsocketSender:
             logging.debug(f"Websocket {self._name} sent message \"{str(message)}\" to {count} clients.")
 
     async def send(self, message:Message):
-        if self._future is None:
-            logging.warning(f"Websocket {self._name} future not ready.")
-            return
-        self._future_lock = self._loop.create_future()
-        self._future.set_result(message)
-        await self._future_lock
+        self._messagequeue.append(message)
+
+        if not self._future_lock.done():
+            self._future_lock.set_result(True)
+        # await self._future_lock
+        # self._future.set_result(message)
+        # self._future_lock = self._loop.create_future()
+        
 
 
         

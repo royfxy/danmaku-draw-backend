@@ -93,13 +93,17 @@ async def get_playlist(request):
 @sanic_app.get("/api/music/play")
 @auth.auth_required
 async def music_detail(request):
-    return sjson((await Playlist.play()).to_json())
-
+    succeed, play_message = await Playlist.play()
+    if not succeed:
+        await Playlist.skip()
+        await message_sender.send(await Playlist.playlist())
+    return sjson(play_message.to_json())
 
 @sanic_app.get("/api/music/skip")
 @auth.auth_required
 async def skip_song(request):
     await Playlist.skip()
+    await message_sender.send(await Playlist.playlist())
     return sjson((await Playlist.playlist()).to_json())
 
 @sanic_app.post("/api/music/add")

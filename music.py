@@ -59,7 +59,7 @@ class MusicService:
 
     async def get_play_url(self, id):
         path = "/song/url"
-        payload = {'id': id, 'br':320000}
+        payload = {'id': id, 'br':192000}
         result_raw = await self._get(path, payload)
         result = json.loads(result_raw)['data'][0]
         return result['url']
@@ -149,7 +149,8 @@ class Playlist:
             return None
         while True:
             random_index = random.randint(0, defalut_playlist_length - 1)
-            if random_index != cls._last_random_index:
+            if (random_index != cls._last_random_index or 
+                len(cls._default_playlist) <= 1):
                 cls._last_random_index = random_index
                 break
         query = cls._default_playlist[random_index]
@@ -190,8 +191,9 @@ class Playlist:
         first_id = song.song_id
         info = await cls._service.get_info(first_id)
         play_url = await cls._service.get_play_url(first_id)
+        succeed = not play_url is None
         logging.debug(f"Song {song.song_name} playing.")
-        return Message(MessageType.PLAY_SONG, {"info": info, "play_url": play_url, "user_name": song.user_name})
+        return succeed, Message(MessageType.PLAY_SONG, {"info": info, "play_url": play_url, "user_name": song.user_name})
 
     @classmethod
     async def skip(cls):

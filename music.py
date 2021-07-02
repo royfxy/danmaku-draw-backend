@@ -59,7 +59,7 @@ class MusicService:
 
     async def get_play_url(self, id):
         path = "/song/url"
-        payload = {'id': id}
+        payload = {'id': id, 'br':320000}
         result_raw = await self._get(path, payload)
         result = json.loads(result_raw)['data'][0]
         return result['url']

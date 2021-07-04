@@ -91,14 +91,14 @@ class LiveHandler:
             user.silver_coin += coin_count
             if (user.vip_level < 1):
                 user.vip_level = 1
-                user.weight += int(coin_count/10)
-                await user.save(force=True)
+            user.weight += int(coin_count/10)
+            await user.save(force=True)
         elif (coin_type == "gold" and coin_count > 0):
             user.gold_coin += coin_count
             if (user.vip_level < 2):
                 user.vip_level = 2
-                user.weight += int(coin_count/2)
-                await user.save(force=True)
+            user.weight += int(coin_count/2)
+            await user.save(force=True)
 
         data = {
             "username": user_name,

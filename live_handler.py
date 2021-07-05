@@ -196,10 +196,6 @@ class LiveHandler:
         if song:
             await self._message_ws.send(await Playlist.playlist())
             user.music_ordered += 1
-            if user.weight > 0:
-                user.weight -= 5
-                if user.weight < 0:
-                    user.weight = 0
             await user.save()
             await self._message_ws.send(
                 Message(MessageType.TEXT_MESSAGE, {

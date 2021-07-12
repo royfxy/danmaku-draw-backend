@@ -141,9 +141,8 @@ class Playlist:
                 break
         logging.debug(f"Song {song.song_id} added to playlist.")
         return song
-
+        
     @classmethod
-    @property
     def default_palylist(cls):
         return cls._default_playlist
 

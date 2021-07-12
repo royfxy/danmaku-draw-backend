@@ -106,7 +106,6 @@ async def get_playlist(request):
 async def get_playlist(request):
     return sjson(Playlist.default_palylist())
 
-
 @sanic_app.get("/api/music/play")
 @auth.auth_required
 async def music_detail(request):
@@ -115,7 +114,6 @@ async def music_detail(request):
         await Playlist.skip()
         await message_sender.send(await Playlist.playlist())
     return sjson(play_message.to_json())
-
 
 @sanic_app.get("/api/music/skip")
 @auth.auth_required
@@ -133,11 +131,9 @@ async def add_default_song(request):
         return text("OK")
     return text("Error")
 
-
 @sanic_app.get("/api/canvas/canvas")
 async def get_canvas(request):
     return sjson(Canvas.canvas().to_json())
-
 
 @sanic_app.post("/api/exit")
 async def exit_backend(request):

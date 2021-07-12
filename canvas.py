@@ -139,6 +139,8 @@ class Canvas(Model):
         pos = cls._get_pos(x, y)
         if pos is None:
             return None
+        if Color.get_hex(color_id) is None:
+            return None
 
         pixel = await Pixel.pixel(user_id, pos, color_id,
                                   ignore_interval=ignore_interval)

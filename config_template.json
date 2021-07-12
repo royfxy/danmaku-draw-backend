@@ -1,0 +1,40 @@
+{
+    "database": {
+        "host": "localhost",
+        "port": 3306,
+        "db": "blive",
+        "username": "blive",
+        "password": "password"
+    },
+    "music": {
+        "ip": "localhost",
+        "port": 4001,
+        "default": [
+            "26060065",
+            "29771432"
+        ]
+    },
+    "messagews": {
+        "ip": "localhost",
+        "port": 4002
+    },
+    "canvas": {
+        "ip": "localhost",
+        "port": 4003,
+        "col": 50,
+        "row": 50
+    },
+    "sanic": {
+        "ip": "localhost",
+        "port": 4004
+    },
+    "liveroom": {
+        "id": 8162887
+    },
+    "initmessage": {
+        "hints": [
+            "每人只能同时在播放列表中点两首歌。切歌只可以切自己点的哦！",
+            "每人每 30 秒可以画一个像素，叫上小伙伴一起合作完成想画的内容吧！"
+        ]
+    }
+}

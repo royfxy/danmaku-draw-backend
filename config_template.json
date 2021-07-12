@@ -9,6 +9,7 @@
     "music": {
         "ip": "localhost",
         "port": 4001,
+        "cookie": "cookie of NeteaseCloudMusicAPI",
         "default": [
             "26060065",
             "29771432"

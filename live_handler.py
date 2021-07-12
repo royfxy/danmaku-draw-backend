@@ -8,7 +8,6 @@ from canvas import Canvas
 
 import logging
 
-
 def get_range_num(x: str):
     try:
         single_num = int(x)
@@ -23,17 +22,18 @@ def get_range_num(x: str):
 
 
 class DanmakuClient(blivedm.BLiveClient):
-    def __init__(self, room_id, handler):
+    def __init__(self, room_id, handler, logger):
         super().__init__(room_id)
         self.start()
         self._handler = handler
+        self._logger = logger
 
     async def _on_receive_danmaku(self, danmaku: blivedm.DanmakuMessage):
-        logging.info(f'{danmaku.uname} {danmaku.uid}：{danmaku.msg}')
+        self._logger.info(f'{danmaku.uname} {danmaku.uid}：{danmaku.msg}')
         await self._handler.parse_danmaku(danmaku)
 
     async def _on_receive_gift(self, gift: blivedm.GiftMessage):
-        logging.info(
+        self._logger.info(
             f'{gift.uname} 赠送{gift.gift_name}x{gift.num} （{gift.coin_type}币x{gift.total_coin}）'
         )
         await self._handler.receive_gift(user_id=gift.uid,
@@ -44,7 +44,7 @@ class DanmakuClient(blivedm.BLiveClient):
                                          coin_count=gift.total_coin)
 
     async def _on_buy_guard(self, message: blivedm.GuardBuyMessage):
-        logging.info(f'{message.username} 购买{message.gift_name}')
+        self._logger.info(f'{message.username} 购买{message.gift_name}')
 
 
 class LiveHandler:
@@ -59,7 +59,7 @@ class LiveHandler:
         user_id = message.uid
         user_name = message.uname
 
-        tokens = re.split('-|—|－|﹣|﹣', text)
+        tokens = re.split('-|—|－|﹣|﹣| ', text)
         length = len(tokens)
         if length == 1:
             if (tokens[0] == "切歌"):

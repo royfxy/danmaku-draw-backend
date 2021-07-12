@@ -33,10 +33,19 @@ parser.add_argument('--token', default=None)
 args = vars(parser.parse_args())
 
 # Config logging
+live_room_logger = logging.getLogger("live_room")
+live_room_logger.setLevel(logging.INFO)
+live_room_logger_handler = logging.FileHandler(
+    filename="live-room.log", mode="w")
+live_room_logger_handler.setLevel(logging.INFO)
+live_room_logger.addHandler(live_room_logger_handler)
+
 logging_level = getattr(logging, args["log"].upper(), None)
 if not isinstance(logging_level, int):
     logging_level = 30
+print(logging_level)
 logging.basicConfig(filename='./server.log', filemode='w', level=logging_level)
+
 
 # Connect to SQL
 sql = SQL()
@@ -61,7 +70,8 @@ Canvas.config(col=config_canvas["col"], row=config_canvas["row"])
 
 # Config music
 music_service = MusicService(config_music["port"],
-                             config_music["ip"])
+                             config_music["ip"],
+                             config_music["cookie"])
 Playlist.set_serivce(music_service)
 if "default" in config_music:
     for query in config_music["default"]:
@@ -76,7 +86,8 @@ live_handler = LiveHandler(message_sender=message_sender,
                            canvas_sender=canvas_sender,
                            init_message=config_initmessage)
 
-client = DanmakuClient(config_live["id"], handler=live_handler)
+client = DanmakuClient(config_live["id"], handler=live_handler,
+                       logger=live_room_logger)
 
 
 @sanic_app.get("/api/message/hints")
@@ -90,6 +101,12 @@ async def get_playlist(request):
     return sjson((await Playlist.playlist()).to_json())
 
 
+@sanic_app.get("/api/music/playlist/default")
+@auth.auth_required
+async def get_playlist(request):
+    return sjson(Playlist.default_palylist())
+
+
 @sanic_app.get("/api/music/play")
 @auth.auth_required
 async def music_detail(request):
@@ -99,12 +116,14 @@ async def music_detail(request):
         await message_sender.send(await Playlist.playlist())
     return sjson(play_message.to_json())
 
+
 @sanic_app.get("/api/music/skip")
 @auth.auth_required
 async def skip_song(request):
     await Playlist.skip()
     await message_sender.send(await Playlist.playlist())
     return sjson((await Playlist.playlist()).to_json())
+
 
 @sanic_app.post("/api/music/add")
 @auth.auth_required
@@ -113,6 +132,7 @@ async def add_default_song(request):
         Playlist.add_to_default(request.json["query"])
         return text("OK")
     return text("Error")
+
 
 @sanic_app.get("/api/canvas/canvas")
 async def get_canvas(request):
@@ -124,7 +144,8 @@ async def exit_backend(request):
     live_handler.store_all()
     return text("OK")
 
-server = sanic_app.create_server(host=config_sanic["ip"],
+server = sanic_app.create_server(access_log=False,
+                                 host=config_sanic["ip"],
                                  port=config_sanic["port"],
                                  return_asyncio_server=True)
 asyncio.get_event_loop().create_task(server)

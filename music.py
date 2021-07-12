@@ -15,12 +15,17 @@ class NetworkError(Exception):
 
 
 class MusicService:
-    def __init__(self, port, ip='localhost'):
+    def __init__(self, port, ip='localhost', cookie=None):
         self._port = port
         self._ip = ip
+        self._payload = {}
+        if cookie is not None:
+            self._payload["cookie"] = cookie
         self.base_url = f"http://{ip}:{port}"
 
     async def _get(self, path, payload):
+        payload.update(self._payload)
+        logging.debug(f"Getting {path}, payload: {payload}")
         async with aiohttp.ClientSession() as session:
             async with session.get(self.base_url + path,
                                    params=payload) as response:
@@ -136,6 +141,11 @@ class Playlist:
                 break
         logging.debug(f"Song {song.song_id} added to playlist.")
         return song
+
+    @classmethod
+    @property
+    def default_palylist(cls):
+        return cls._default_playlist
 
     @classmethod
     def add_to_default(cls, query):

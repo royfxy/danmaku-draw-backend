@@ -94,8 +94,8 @@ class Playlist:
     _service = None
     _playlist = []
     _user_song_count = {}
-    _limit_per_user = 2
-    _total_limit = 50
+    _limit_per_user = 3
+    _total_limit = 100
 
     _default_playlist = []
     _last_random_index = None
@@ -111,12 +111,15 @@ class Playlist:
             return None
         if user.uid in cls._user_song_count and cls._user_song_count[
                 user.uid] >= cls._limit_per_user:
+            logging.warning(f"{user.name} add song failed: user reached limit.")
             return None
         try:
             song_id, song_name, artists = await cls._service.search(query)
         except EmptyError:
+            logging.warning(f"{user.name} add song failed: query {query} not found")
             return None
         except NetworkError:
+            logging.warning(f"{user.name} add song failed: network error")
             return None
 
         weight = user.weight
@@ -166,8 +169,10 @@ class Playlist:
         try:
             song_id, song_name, artists = await cls._service.search(query)
         except EmptyError:
+            logging.warning(f"Default song play failed: query {query} not found")
             return None
         except NetworkError:
+            logging.warning(f"Default song play failed: network error")
             return None
         cls._random_song = Song(user_id=0,
                     user_name="系统",

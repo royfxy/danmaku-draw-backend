@@ -38,6 +38,8 @@ live_room_logger.setLevel(logging.INFO)
 live_room_logger_handler = logging.FileHandler(
     filename="live-room.log", mode="w")
 live_room_logger_handler.setLevel(logging.INFO)
+live_room_logger_formatter = logging.Formatter('%(asctime)s: %(levelname)s - %(message)s')
+live_room_logger_handler.setFormatter(live_room_logger_formatter)
 live_room_logger.addHandler(live_room_logger_handler)
 
 logging_level = getattr(logging, args["log"].upper(), None)

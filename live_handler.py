@@ -15,7 +15,7 @@ def get_range_num(x: str):
     except ValueError:
         nums_str = re.split(':|：', x)
         if len(nums_str) != 2:
-            return None, None
+            raise ValueError
         num1 = int(nums_str[0])
         num2 = int(nums_str[1])
         return num1, num2

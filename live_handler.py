@@ -8,6 +8,7 @@ from canvas import Canvas
 
 import logging
 
+
 def get_range_num(x: str):
     try:
         single_num = int(x)
@@ -154,15 +155,18 @@ class LiveHandler:
                         "text": f"{user.name} 涂色: {y_start+1}-{x_start+1}-{color_id}",
                         "viplevel": user.vip_level
                     }))
-        elif pixel_count >= 50:
-            await self._message_ws.send(
-                    Message(MessageType.TEXT_MESSAGE, {
-                        "text": f"{user.name} 批量涂色失败: 一次涂不可以超过 50 个点哦",
-                        "viplevel": user.vip_level
-                    }))
-            return
         else:
-            if user.weight < pixel_count:
+            tiered_ratio = 1
+            if pixel_count >= 200:
+                tiered_ratio = 6
+            elif pixel_count >= 150:
+                tiered_ratio = 5
+            elif pixel_count >= 100:
+                tiered_ratio = 3
+            elif pixel_count > 50:
+                tiered_ratio = 2
+
+            if user.weight < pixel_count*tiered_ratio:
                 await self._message_ws.send(
                     Message(MessageType.TEXT_MESSAGE, {
                         "text": f"{user.name} 批量涂色失败: 点数不足，剩余 {user.weight} 点",
@@ -178,7 +182,7 @@ class LiveHandler:
             }
             user.dots_drawed += len(pixels)
             if user.weight > 0:
-                user.weight -= len(pixels)
+                user.weight -= len(pixels)*tiered_ratio
                 if user.weight < 0:
                     user.weight = 0
             await self._canvas_ws.send(Message(MessageType.DRAW_MULTIPLE_PIXELS, data))
@@ -218,7 +222,7 @@ class LiveHandler:
     async def _get_value(self, user_id, user_name):
         user = await User.user(uid=user_id, name=user_name)
         await self._message_ws.send(
-                Message(MessageType.TEXT_MESSAGE, {
+            Message(MessageType.TEXT_MESSAGE, {
                     "text": f"{user.name} 剩余点数: {user.weight}",
                     "viplevel": user.vip_level
-                }))
+                    }))

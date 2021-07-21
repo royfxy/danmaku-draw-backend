@@ -42,12 +42,12 @@ class MusicService:
         payload = {'keywords': query}
 
         result_raw = await self._get(path, payload)
-        result = json.loads(result_raw)['result']['songs']
-        if len(result) == 0:
+        result = json.loads(result_raw)['result']
+        if 'songs' not in result.keys() or len(result['songs']) == 0:
             raise EmptyError
-        music_id = result[0]['id']
-        title = result[0]['name']
-        artists = ", ".join([x["name"] for x in result[0]['artists']])
+        music_id = result['songs'][0]['id']
+        title = result['songs'][0]['name']
+        artists = ", ".join([x["name"] for x in result['songs'][0]['artists']])
         return music_id, title, artists
 
     async def get_info(self, id):

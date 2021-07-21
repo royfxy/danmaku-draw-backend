@@ -152,10 +152,15 @@ async def exit_backend(request):
 @auth.auth_required
 async def add_default_song(request):
     request_json = request.json
+    print(request_json)
     if "weight" in request_json and "uid" in request_json:
-        await live_handler.change_weight(request_json["uid"],
-                                         request_json["weight"])
-        return text("OK")
+        try:
+            weight_value = int(request_json["weight"])
+            await live_handler.change_weight(request_json["uid"],
+                                         weight_value)
+            return text("OK")
+        except Exception:
+            pass
     return text("Error")
 
 server = sanic_app.create_server(access_log=False,

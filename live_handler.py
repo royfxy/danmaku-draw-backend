@@ -91,13 +91,13 @@ class LiveHandler:
             user.silver_coin += coin_count
             if (user.vip_level < 1):
                 user.vip_level = 1
-            user.weight += int(coin_count/10)
+            user.weight += int(coin_count/20)
             await user.save(force=True)
         elif (coin_type == "gold" and coin_count > 0):
             user.gold_coin += coin_count
             if (user.vip_level < 2):
                 user.vip_level = 2
-            user.weight += int(coin_count/2)
+            user.weight += int(coin_count/5)
             await user.save(force=True)
 
         data = {
@@ -118,6 +118,11 @@ class LiveHandler:
     def store_all(self):
         asyncio.get_event_loop().create_task(User.store_all())
         logging.info(f"All data stored to DB.")
+
+    async def change_weight(self, user_id, weight):
+        user = await User.user(uid=user_id)
+        user.weight += weight
+        await user.save()
 
     def _parse_draw_op(self, tokens):
         x_1, x_2 = get_range_num(tokens[1])
@@ -149,6 +154,13 @@ class LiveHandler:
                         "text": f"{user.name} 涂色: {y_start+1}-{x_start+1}-{color_id}",
                         "viplevel": user.vip_level
                     }))
+        elif pixel_count >= 50:
+            await self._message_ws.send(
+                    Message(MessageType.TEXT_MESSAGE, {
+                        "text": f"{user.name} 批量涂色失败: 一次涂不可以超过 50 个点哦",
+                        "viplevel": user.vip_level
+                    }))
+            return
         else:
             if user.weight < pixel_count:
                 await self._message_ws.send(

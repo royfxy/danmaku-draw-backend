@@ -38,7 +38,8 @@ live_room_logger.setLevel(logging.INFO)
 live_room_logger_handler = logging.FileHandler(
     filename="live-room.log", mode="w")
 live_room_logger_handler.setLevel(logging.INFO)
-live_room_logger_formatter = logging.Formatter('%(asctime)s: %(levelname)s - %(message)s')
+live_room_logger_formatter = logging.Formatter(
+    '%(asctime)s: %(levelname)s - %(message)s')
 live_room_logger_handler.setFormatter(live_room_logger_formatter)
 live_room_logger.addHandler(live_room_logger_handler)
 
@@ -108,6 +109,7 @@ async def get_playlist(request):
 async def get_playlist(request):
     return sjson(Playlist.default_palylist())
 
+
 @sanic_app.get("/api/music/play")
 @auth.auth_required
 async def music_detail(request):
@@ -116,6 +118,7 @@ async def music_detail(request):
         await Playlist.skip()
         await message_sender.send(await Playlist.playlist())
     return sjson(play_message.to_json())
+
 
 @sanic_app.get("/api/music/skip")
 @auth.auth_required
@@ -133,14 +136,27 @@ async def add_default_song(request):
         return text("OK")
     return text("Error")
 
+
 @sanic_app.get("/api/canvas/canvas")
 async def get_canvas(request):
     return sjson(Canvas.canvas().to_json())
+
 
 @sanic_app.post("/api/exit")
 async def exit_backend(request):
     live_handler.store_all()
     return text("OK")
+
+
+@sanic_app.post("/api/user/changeweight")
+@auth.auth_required
+async def add_default_song(request):
+    request_json = request.json
+    if "weight" in request_json and "uid" in request_json:
+        await live_handler.change_weight(request_json["uid"],
+                                         request_json["weight"])
+        return text("OK")
+    return text("Error")
 
 server = sanic_app.create_server(access_log=False,
                                  host=config_sanic["ip"],

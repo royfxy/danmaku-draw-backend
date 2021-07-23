@@ -3,6 +3,7 @@ import asyncio
 import logging
 import random
 import json
+import time
 
 from sanic import Sanic
 from sanic.response import text
@@ -33,10 +34,11 @@ parser.add_argument('--token', default=None)
 args = vars(parser.parse_args())
 
 # Config logging
+date_now = time.strftime("%Y-%m-%d", time.localtime())
 live_room_logger = logging.getLogger("live_room")
 live_room_logger.setLevel(logging.INFO)
 live_room_logger_handler = logging.FileHandler(
-    filename="live-room.log", mode="w")
+    filename="live-room-" + date_now + ".log", mode="w")
 live_room_logger_handler.setLevel(logging.INFO)
 live_room_logger_formatter = logging.Formatter(
     '%(asctime)s: %(levelname)s - %(message)s')

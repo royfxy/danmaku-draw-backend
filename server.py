@@ -152,7 +152,6 @@ async def exit_backend(request):
 @auth.auth_required
 async def add_default_song(request):
     request_json = request.json
-    print(request_json)
     if "weight" in request_json and "uid" in request_json:
         try:
             weight_value = int(request_json["weight"])

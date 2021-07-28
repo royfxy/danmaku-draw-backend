@@ -108,6 +108,7 @@ class Playlist:
     @classmethod
     async def add(cls, user, query):
         if len(cls._playlist) >= cls._total_limit:
+            logging.warning(f"{user.name} add song failed: songs reached total limit.")
             return None
         if user.uid in cls._user_song_count and cls._user_song_count[
                 user.uid] >= cls._limit_per_user:
@@ -132,17 +133,19 @@ class Playlist:
                     weight=weight)
         if user.uid in cls._user_song_count:
             cls._user_song_count[user.uid] += 1
-        else:
-            cls._user_song_count[user.uid] = 1
-        if len(cls._playlist) == 0 or weight <= cls._playlist[-1].weight:
             cls._playlist.append(song)
         else:
-            for i in range(1, len(cls._playlist)):
-                if (cls._playlist[i].weight >= weight):
-                    continue
-                cls._playlist.insert(i, song)
-                break
-        logging.debug(f"Song {song.song_id} added to playlist.")
+            cls._user_song_count[user.uid] = 1
+            if len(cls._playlist) == 0 or weight <= cls._playlist[-1].weight:
+                cls._playlist.append(song)
+            else:
+                insert_index = 1
+                for insert_index in range(1, len(cls._playlist)):
+                    if (cls._playlist[insert_index].weight >= weight):
+                        continue
+                    break
+                cls._playlist.insert(insert_index, song)
+        logging.debug(f"Song {song.song_id} added to playlist, user {user.name} ordered {cls._user_song_count[user.uid]} songs.")
         return song
         
     @classmethod
@@ -211,12 +214,13 @@ class Playlist:
 
     @classmethod
     async def skip(cls):
-        if len(cls._playlist) == 0:
-            await cls.new_random_song()
-        else:
+        if len(cls._playlist) != 0:
             song = cls._playlist.pop(0)
             cls._user_song_count[song.user_id] -= 1
-            if cls._user_song_count[song.user_id] == 0:
+            if cls._user_song_count[song.user_id] <= 0:
                 del cls._user_song_count[song.user_id]
+
+        if len(cls._playlist) == 0:
+            await cls.new_random_song()
         logging.debug(f"Song skipped.")
         return True

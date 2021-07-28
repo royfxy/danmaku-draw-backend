@@ -93,13 +93,13 @@ class LiveHandler:
             if (user.vip_level < 1):
                 user.vip_level = 1
             user.weight += int(coin_count/20)
-            await user.save(force=True)
+            await user.save()
         elif (coin_type == "gold" and coin_count > 0):
             user.gold_coin += coin_count
             if (user.vip_level < 2):
                 user.vip_level = 2
             user.weight += int(coin_count/5)
-            await user.save(force=True)
+            await user.save()
 
         data = {
             "username": user_name,
@@ -115,10 +115,6 @@ class LiveHandler:
 
     def get_init_message(self):
         return Message(MessageType.INIT_MESSAGE, self.init_message)
-
-    def store_all(self):
-        asyncio.get_event_loop().create_task(User.store_all())
-        logging.info(f"All data stored to DB.")
 
     async def change_weight(self, user_id, weight):
         user = await User.user(uid=user_id)
@@ -206,6 +202,9 @@ class LiveHandler:
                 }))
 
     async def _add_song(self, user_id, user_name, query):
+        query = query.strip()
+        if query == "":
+            return
         user = await User.user(uid=user_id, name=user_name)
         song = await Playlist.add(user, query)
 

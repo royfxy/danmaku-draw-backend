@@ -143,13 +143,6 @@ async def add_default_song(request):
 async def get_canvas(request):
     return sjson(Canvas.canvas().to_json())
 
-
-@sanic_app.post("/api/exit")
-async def exit_backend(request):
-    live_handler.store_all()
-    return text("OK")
-
-
 @sanic_app.post("/api/user/changeweight")
 @auth.auth_required
 async def add_default_song(request):

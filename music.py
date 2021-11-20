@@ -48,7 +48,8 @@ class MusicService:
         music_id = result['songs'][0]['id']
         title = result['songs'][0]['name']
         artists = ", ".join([x["name"] for x in result['songs'][0]['artists']])
-        return music_id, title, artists
+        duration = result['songs'][0]['duration']
+        return music_id, title, artists, duration
 
     async def get_info(self, id):
         path = "/song/detail"
@@ -115,12 +116,15 @@ class Playlist:
             logging.warning(f"{user.name} add song failed: user reached limit.")
             return None
         try:
-            song_id, song_name, artists = await cls._service.search(query)
+            song_id, song_name, artists, duration = await cls._service.search(query)
         except EmptyError:
             logging.warning(f"{user.name} add song failed: query {query} not found")
             return None
         except NetworkError:
             logging.warning(f"{user.name} add song failed: network error")
+            return None
+        if duration > 600000:
+            logging.warning(f"{user.name} add song failed: too long")
             return None
 
         weight = user.weight

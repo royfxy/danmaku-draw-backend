@@ -174,7 +174,7 @@ class Playlist:
                 break
         query = cls._default_playlist[random_index]
         try:
-            song_id, song_name, artists = await cls._service.search(query)
+            song_id, song_name, artists, duration = await cls._service.search(query)
         except EmptyError:
             logging.warning(f"Default song play failed: query {query} not found")
             return None
